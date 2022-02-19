@@ -1,16 +1,29 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
+using OrderApi.Data.Database;
+using OrderApi.Data.Repository.v1;
+using OrderApi.Domain.Entities;
+using OrderApi.Models.v1;
+using OrderApi.Service.v1.Command;
+using OrderApi.Service.v1.Query;
+using OrderApi.Service.v1.Services;
+using OrderApi.Validators.v1;
 
 namespace OrderApi
 {
@@ -26,7 +39,30 @@ namespace OrderApi
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            //TODO: resolve dependancies
+            
+           
+            
+            services.AddOptions();
+            services.AddAutoMapper(typeof(Startup));
+            services.AddMvc().AddFluentValidation();
+
+            services.AddMediatR(Assembly.GetExecutingAssembly(),typeof(ICustomerNameUpdateService).Assembly);
+            
+            services.AddScoped(typeof(IRepository<>),typeof(Repository<>));
+            services.AddScoped<IOrderRepository, OrderRepository>();
+            
+            services.AddTransient<IValidator<OrderModel>,OrderModelValidator>();
+
+            services.AddTransient<IRequestHandler<GetPaidOrderQuery, List<Order>>, GetPaidOrderQueryHandler>();
+            services.AddTransient<IRequestHandler<GetOrderByIdQuery, Order>, GetOrderByIdQueryHandler>();
+            services.AddTransient<IRequestHandler<GetOrderByCustomerGuidQuery, List<Order>>, GetOrderByCustomerGuidQueryHandler>();
+            services.AddTransient<IRequestHandler<CreateOrderCommand, Order>, CreateOrderCommandHandler>();
+            services.AddTransient<IRequestHandler<PayOrderCommand, Order>, PayOrderCommandHandler>();
+            services.AddTransient<IRequestHandler<UpdateOrderCommand>, UpdateOrderCommandHandler>();
+            services.AddTransient<ICustomerNameUpdateService, CustomerNameUpdateService>();
+
+            services.AddDbContext<OrderContext>(options => options.UseInMemoryDatabase(Guid.NewGuid().ToString()));
+            
 
             services.AddControllers();
             services.AddSwaggerGen(c =>
