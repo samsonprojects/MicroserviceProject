@@ -19,6 +19,8 @@ using Microsoft.OpenApi.Models;
 using OrderApi.Data.Database;
 using OrderApi.Data.Repository.v1;
 using OrderApi.Domain.Entities;
+using OrderApi.Messaging.Receive.Options.v1;
+using OrderApi.Messaging.Receive.Receiver.v1;
 using OrderApi.Models.v1;
 using OrderApi.Service.v1.Command;
 using OrderApi.Service.v1.Query;
@@ -46,6 +48,10 @@ namespace OrderApi
             services.AddAutoMapper(typeof(Startup));
             services.AddMvc().AddFluentValidation();
 
+            var serviceClientSettingsConfig = Configuration.GetSection("RabbitMq");
+            var serviceClientSettings = Configuration.Get<RabbitMqConfiguration>();
+            services.Configure<RabbitMqConfiguration>(serviceClientSettingsConfig);
+
             services.AddMediatR(Assembly.GetExecutingAssembly(),typeof(ICustomerNameUpdateService).Assembly);
             
             services.AddScoped(typeof(IRepository<>),typeof(Repository<>));
@@ -69,6 +75,12 @@ namespace OrderApi
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "OrderApi", Version = "v1" });
             });
+
+            if(serviceClientSettings.Enabled)
+            {
+                Console.WriteLine("RabbitMq Enabled");
+                services.AddHostedService<CustomerFullNameUpdateReceiver>();
+            }
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
